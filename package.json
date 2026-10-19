@@ -1,0 +1,43 @@
+{
+  "name": "veil-redact",
+  "version": "0.1.0",
+  "description": "A local-first redaction gate for anything you are about to paste into an AI.",
+  "type": "module",
+  "bin": {
+    "veil": "./src/cli.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shreya-oeo/veil.git"
+  },
+  "homepage": "https://github.com/shreya-oeo/veil#readme",
+  "bugs": {
+    "url": "https://github.com/shreya-oeo/veil/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "fixtures": "node fixtures/generate.js",
+    "pretest": "node fixtures/generate.js",
+    "test": "node --test",
+    "scan": "node fixtures/generate.js && node src/cli.js scan fixtures/support-ticket.md",
+    "redact": "node fixtures/generate.js && node src/cli.js redact fixtures/support-ticket.md",
+    "serve": "node src/cli.js serve"
+  },
+  "keywords": [
+    "privacy",
+    "redaction",
+    "ollama",
+    "gemma",
+    "local-first",
+    "llm"
+  ],
+  "license": "MIT",
+  "files": [
+    "src",
+    "public",
+    "README.md",
+    "LICENSE"
+  ]
+}
