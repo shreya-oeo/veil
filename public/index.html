@@ -1,0 +1,681 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>veil — redact before you paste</title>
+    <style>
+      :root {
+        --bg: #0a0c10;
+        --panel: #10141a;
+        --panel-2: #141922;
+        --line: #232a36;
+        --line-soft: #1a2029;
+        --text: #dce3ee;
+        --muted: #8b97ab;
+        --faint: #5d6879;
+        --accent: #a78bfa;
+        --accent-soft: #2a2140;
+        --critical: #fb7185;
+        --high: #fb923c;
+        --medium: #fbbf24;
+        --low: #38bdf8;
+        --ok: #4ade80;
+        --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+        --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        --radius: 10px;
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body { height: 100%; }
+
+      body {
+        margin: 0;
+        background:
+          radial-gradient(900px 500px at 15% -10%, #1a1230 0%, transparent 60%),
+          radial-gradient(700px 400px at 95% 0%, #0d1f24 0%, transparent 55%),
+          var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        font-size: 14px;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .shell {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 0 24px 24px;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 20px 2px 18px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+
+      .brand { display: flex; align-items: center; gap: 11px; }
+
+      .mark {
+        width: 30px; height: 30px;
+        border-radius: 9px;
+        background: linear-gradient(145deg, #c4b5fd, #7c3aed 60%, #3b1d72);
+        box-shadow: 0 0 0 1px #4c1d95, 0 8px 24px -8px #7c3aed;
+        position: relative;
+      }
+      .mark::after {
+        content: "";
+        position: absolute;
+        inset: 9px 10px;
+        border-radius: 50% 50% 50% 0;
+        background: #0a0c10;
+        transform: rotate(-45deg);
+      }
+
+      .brand h1 {
+        font-size: 19px;
+        font-weight: 650;
+        letter-spacing: -0.02em;
+        margin: 0;
+      }
+
+      .brand p {
+        margin: 0;
+        color: var(--faint);
+        font-size: 12px;
+        letter-spacing: 0.01em;
+      }
+
+      .header-right {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 5px 10px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--panel);
+        font-size: 11.5px;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      .dot {
+        width: 7px; height: 7px; border-radius: 50%;
+        background: var(--faint);
+        box-shadow: 0 0 8px currentColor;
+      }
+      .dot.ok { background: var(--ok); color: var(--ok); }
+      .dot.warn { background: var(--medium); color: var(--medium); }
+      .dot.off { background: var(--faint); color: var(--faint); }
+
+      main {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 18px;
+        padding-top: 18px;
+        flex: 1;
+        min-height: 0;
+      }
+
+      @media (max-width: 980px) {
+        main { grid-template-columns: 1fr; }
+      }
+
+      .pane {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: linear-gradient(180deg, var(--panel-2), var(--panel));
+        overflow: hidden;
+        box-shadow: 0 20px 50px -30px #000;
+      }
+
+      .pane-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line-soft);
+        background: #0d1117aa;
+        min-height: 46px;
+      }
+
+      .pane-title {
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .pane-head .spacer { flex: 1; }
+
+      textarea {
+        flex: 1;
+        width: 100%;
+        min-height: 320px;
+        resize: none;
+        border: 0;
+        outline: none;
+        padding: 16px;
+        background: transparent;
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 12.5px;
+        line-height: 1.65;
+        tab-size: 2;
+      }
+      textarea::placeholder { color: #4a5568; }
+
+      .pane-foot {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-top: 1px solid var(--line-soft);
+        background: #0b0f15;
+      }
+
+      .counter { color: var(--faint); font-size: 11.5px; font-family: var(--mono); }
+
+      button {
+        font-family: inherit;
+        font-size: 12.5px;
+        color: var(--text);
+        background: var(--panel-2);
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        padding: 6px 11px;
+        cursor: pointer;
+        transition: border-color 120ms ease, background 120ms ease, transform 60ms ease;
+      }
+      button:hover { border-color: #354052; background: #1a2130; }
+      button:active { transform: translateY(1px); }
+      button:disabled { opacity: 0.5; cursor: wait; }
+
+      button.primary {
+        background: linear-gradient(180deg, #8b5cf6, #6d28d9);
+        border-color: #7c3aed;
+        color: #fff;
+        font-weight: 600;
+        box-shadow: 0 4px 16px -6px #7c3aed;
+      }
+      button.primary:hover { background: linear-gradient(180deg, #9a70f8, #7c3aed); }
+
+      button.ghost { background: transparent; }
+
+      select {
+        font-family: inherit;
+        font-size: 12px;
+        color: var(--muted);
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        padding: 5px 8px;
+        outline: none;
+      }
+
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        user-select: none;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .toggle input { position: absolute; opacity: 0; pointer-events: none; }
+      .track {
+        width: 32px; height: 18px;
+        border-radius: 999px;
+        background: #232a36;
+        border: 1px solid #2e3747;
+        position: relative;
+        transition: background 140ms ease;
+      }
+      .track::after {
+        content: "";
+        position: absolute;
+        top: 2px; left: 2px;
+        width: 12px; height: 12px;
+        border-radius: 50%;
+        background: #7c8798;
+        transition: transform 140ms ease, background 140ms ease;
+      }
+      .toggle input:checked + .track { background: #3b2a63; border-color: #5b3fa0; }
+      .toggle input:checked + .track::after { transform: translateX(14px); background: #c4b5fd; }
+
+      .out {
+        flex: 1;
+        overflow: auto;
+        padding: 16px;
+        min-height: 320px;
+        font-family: var(--mono);
+        font-size: 12.5px;
+        line-height: 1.65;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+
+      .out.empty { color: var(--faint); font-family: var(--sans); font-size: 13px; }
+
+      .finding {
+        border-radius: 4px;
+        padding: 1px 3px;
+        margin: 0 1px;
+        background: var(--accent-soft);
+        border: 1px solid #4c3a80;
+        color: #d8ccff;
+        font-weight: 500;
+      }
+      .finding[data-sev="critical"] { background: #3a1620; border-color: #7f2438; color: #fecdd3; }
+      .finding[data-sev="high"] { background: #3a2414; border-color: #86421c; color: #fed7aa; }
+      .finding[data-sev="medium"] { background: #382d12; border-color: #7c5c15; color: #fde68a; }
+      .finding[data-sev="low"] { background: #10293a; border-color: #1d5675; color: #bae6fd; }
+      .finding[data-source="model"] { border-style: dashed; }
+
+      .below {
+        border-top: 1px solid var(--line-soft);
+        max-height: 42%;
+        overflow: auto;
+      }
+
+      .below-head {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 12px;
+        background: #0d1117f2;
+        backdrop-filter: blur(6px);
+        border-bottom: 1px solid var(--line-soft);
+        font-size: 11.5px;
+        color: var(--muted);
+      }
+
+      .list { list-style: none; margin: 0; padding: 4px; }
+
+      .row {
+        display: grid;
+        grid-template-columns: 74px minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: baseline;
+        padding: 7px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+      }
+      .row:hover { background: #141a24; }
+
+      .sev {
+        justify-self: start;
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        padding: 2px 6px;
+        border-radius: 4px;
+        border: 1px solid currentColor;
+      }
+      .sev[data-sev="critical"] { color: var(--critical); }
+      .sev[data-sev="high"] { color: var(--high); }
+      .sev[data-sev="medium"] { color: var(--medium); }
+      .sev[data-sev="low"] { color: var(--low); }
+
+      .row .label { color: var(--text); }
+      .row .why { color: var(--faint); font-size: 11.5px; display: block; margin-top: 1px; }
+      .row .ph { font-family: var(--mono); color: var(--accent); font-size: 11px; }
+
+      footer {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        align-items: center;
+        padding-top: 14px;
+        color: var(--faint);
+        font-size: 11.5px;
+      }
+      footer .sep { color: #303847; }
+      kbd {
+        font-family: var(--mono);
+        font-size: 10.5px;
+        border: 1px solid var(--line);
+        border-bottom-width: 2px;
+        border-radius: 4px;
+        padding: 1px 5px;
+        color: var(--muted);
+        background: var(--panel);
+      }
+
+      .error {
+        margin: 0;
+        padding: 10px 12px;
+        color: #fecdd3;
+        background: #2b1118;
+        border-top: 1px solid #5c1f2c;
+        font-size: 12px;
+      }
+      .hidden { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header>
+        <div class="brand">
+          <div class="mark" aria-hidden="true"></div>
+          <div>
+            <h1>veil</h1>
+            <p>Redact before you paste. Runs on this machine.</p>
+          </div>
+        </div>
+        <div class="header-right">
+          <span class="chip" id="model-chip" title="Ollama status">
+            <span class="dot off" id="model-dot"></span>
+            <span id="model-text">model: checking…</span>
+          </span>
+          <span class="chip">127.0.0.1</span>
+        </div>
+      </header>
+
+      <main>
+        <section class="pane">
+          <div class="pane-head">
+            <span class="pane-title">Input</span>
+            <div class="spacer"></div>
+            <button class="ghost" id="sample" type="button">Load sample</button>
+            <button class="ghost" id="clear" type="button">Clear</button>
+          </div>
+          <textarea
+            id="input"
+            spellcheck="false"
+            placeholder="Paste the text, diff, config, or error log you were about to send to an AI…"
+            aria-label="Text to redact"
+          ></textarea>
+          <div class="pane-foot">
+            <label class="toggle" title="Run the local model pass for names, customers, and internal projects">
+              <input type="checkbox" id="use-model" />
+              <span class="track"></span>
+              Local model pass
+            </label>
+            <select id="mode" aria-label="Redaction mode">
+              <option value="placeholder">placeholders</option>
+              <option value="mask">block out</option>
+            </select>
+            <div class="spacer" style="flex: 1"></div>
+            <span class="counter" id="counter">0 chars</span>
+            <button class="primary" id="run" type="button">Redact</button>
+          </div>
+          <p class="error hidden" id="error"></p>
+        </section>
+
+        <section class="pane">
+          <div class="pane-head">
+            <span class="pane-title">Safe to send</span>
+            <div class="spacer"></div>
+            <span class="counter" id="timing"></span>
+            <button id="copy" type="button" disabled>Copy</button>
+          </div>
+          <div class="out empty" id="out">Nothing scanned yet.</div>
+          <div class="below">
+            <div class="below-head">
+              <span id="findings-title">Findings</span>
+              <div class="spacer" style="flex: 1"></div>
+              <span id="risk"></span>
+            </div>
+            <ul class="list" id="findings"></ul>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <span><kbd>Ctrl</kbd> <kbd>Enter</kbd> to redact</span>
+        <span class="sep">·</span>
+        <span>Rules and entropy run first; the model only sees text you submit, and its quotes are kept only if they appear verbatim.</span>
+        <span class="sep">·</span>
+        <span>No telemetry, no network calls except your Ollama host.</span>
+      </footer>
+    </div>
+
+    <script>
+      // Assembled from parts so this file never contains a credential-shaped
+      // literal. None of these values are real.
+      const SAMPLE = [
+        'Hey, can you help me debug this? Customer Priya Raman at Northwind Traders says checkout fails after the migration.',
+        '',
+        'Internal project: HALCYON-7. Staging host: billing-api.corp.internal',
+        'Her email is priya.raman@northwind-traders.com, phone +1 415 555 0132.',
+        '',
+        'From the env file:',
+        'AWS_ACCESS_KEY_ID=' + 'AKIA' + 'QWERTYUIOPASDFGH',
+        'AWS_SECRET_ACCESS_KEY=' + 'wJalrXUtnFEMI/K7MDENG/bPxRfiCY' + 'EXAMPLEKEY',
+        'DATABASE_URL=postgres://veil_app:' + 'hunter2' + 'isbad' + '@db-prod-01.corp.internal:5432/billing',
+        'STRIPE_SECRET_KEY=' + 'sk_' + 'live_51Nx8kLm2QpR7sT4uV6wX9yZ',
+        '',
+        'curl https://api.northwind-traders.com/v1/orders?token=' + 'eyJhbGciOiJIUzI1NiJ9' + '.eyJzdWIiOiJwcml5YSJ9' + '.9xQ2mB7kL0pR4sT6uV8w',
+        '',
+        'Card on file: 4242 4242 4242 4242',
+        '',
+        'Error at 2026-10-17T09:14:22Z from 10.42.7.19: connection reset',
+        '',
+        'We are under NDA with them, so please do not forward this.',
+      ].join('\n');
+
+      const $ = (id) => document.getElementById(id);
+      const input = $('input');
+      const out = $('out');
+      const findingsEl = $('findings');
+      const errorEl = $('error');
+      const copyBtn = $('copy');
+      const runBtn = $('run');
+      let lastRedacted = '';
+
+      const SEV_ORDER = ['critical', 'high', 'medium', 'low'];
+
+      function setError(message) {
+        errorEl.textContent = message || '';
+        errorEl.classList.toggle('hidden', !message);
+      }
+
+      function setModelChip(state, label) {
+        const dot = $('model-dot');
+        dot.className = `dot ${state}`;
+        $('model-text').textContent = label;
+      }
+
+      async function checkHealth() {
+        try {
+          const res = await fetch('/api/health');
+          const data = await res.json();
+          const ollama = data.ollama || {};
+          if (!ollama.reachable) {
+            setModelChip('off', 'ollama offline · rules only');
+          } else if (!ollama.models.includes(ollama.model)) {
+            setModelChip('warn', `${ollama.model} not pulled`);
+          } else if (String(ollama.model).endsWith(':cloud')) {
+            setModelChip('warn', `${ollama.model} · cloud route`);
+          } else {
+            setModelChip('ok', `${ollama.model} · local`);
+          }
+        } catch {
+          setModelChip('off', 'server offline');
+        }
+      }
+
+      function renderSegments(segments) {
+        out.textContent = '';
+        out.classList.remove('empty');
+        for (const segment of segments) {
+          if (segment.type === 'text') {
+            out.appendChild(document.createTextNode(segment.text));
+            continue;
+          }
+          const mark = document.createElement('span');
+          mark.className = 'finding';
+          mark.dataset.sev = segment.severity;
+          mark.dataset.source = segment.source;
+          mark.textContent = segment.text;
+          mark.title = `${segment.label} · ${segment.source}`;
+          out.appendChild(mark);
+        }
+      }
+
+      function renderFindings(findings) {
+        findingsEl.textContent = '';
+        const sorted = [...findings].sort(
+          (a, b) => SEV_ORDER.indexOf(a.severity) - SEV_ORDER.indexOf(b.severity) || a.start - b.start,
+        );
+        for (const finding of sorted) {
+          const li = document.createElement('li');
+          li.className = 'row';
+
+          const sev = document.createElement('span');
+          sev.className = 'sev';
+          sev.dataset.sev = finding.severity;
+          sev.textContent = finding.severity;
+
+          const label = document.createElement('span');
+          label.className = 'label';
+          label.textContent = finding.label;
+          if (finding.why) {
+            const why = document.createElement('span');
+            why.className = 'why';
+            why.textContent = finding.why;
+            label.appendChild(why);
+          }
+
+          const ph = document.createElement('span');
+          ph.className = 'ph';
+          ph.textContent = finding.placeholder;
+
+          li.append(sev, label, ph);
+          findingsEl.appendChild(li);
+        }
+        if (sorted.length === 0) {
+          const li = document.createElement('li');
+          li.className = 'row';
+          li.style.color = 'var(--faint)';
+          li.textContent = 'No deterministic findings. A model pass may still catch names and context.';
+          findingsEl.appendChild(li);
+        }
+      }
+
+      async function run() {
+        const text = input.value;
+        if (!text.trim()) {
+          setError('Paste something first, or load the sample.');
+          return;
+        }
+
+        setError('');
+        runBtn.disabled = true;
+        runBtn.textContent = 'Scanning…';
+        const started = performance.now();
+
+        try {
+          const res = await fetch('/api/scan', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              text,
+              useModel: $('use-model').checked,
+              mode: $('mode').value,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+          lastRedacted = data.redacted;
+          copyBtn.disabled = false;
+          renderSegments(data.segments || []);
+          renderFindings(data.findings || []);
+
+          const counts = data.stats.bySeverity;
+          $('findings-title').textContent = `Findings · ${data.stats.total}`;
+          $('risk').textContent =
+            counts.critical > 0
+              ? `${counts.critical} critical`
+              : data.stats.total > 0
+                ? `${Math.round(data.residual.redactedRatio * 100)}% of text replaced`
+                : 'clean';
+          $('timing').textContent = `${data.timingMs} ms`;
+
+          if (data.model?.used) {
+            if (data.model.error) setError(`Model pass skipped: ${data.model.error}`);
+            else if (data.model.dropped > 0) {
+              setError(
+                `Model returned ${data.model.dropped} quote(s) that were not verbatim in your text and were dropped.`,
+              );
+            }
+          }
+        } catch (err) {
+          setError(err.message || 'Scan failed.');
+        } finally {
+          runBtn.disabled = false;
+          runBtn.textContent = 'Redact';
+          $('timing').textContent = `${Math.round(performance.now() - started)} ms`;
+        }
+      }
+
+      input.addEventListener('input', () => {
+        $('counter').textContent = `${input.value.length.toLocaleString()} chars`;
+      });
+
+      $('run').addEventListener('click', run);
+      $('sample').addEventListener('click', () => {
+        input.value = SAMPLE;
+        input.dispatchEvent(new Event('input'));
+        run();
+      });
+      $('clear').addEventListener('click', () => {
+        input.value = '';
+        input.dispatchEvent(new Event('input'));
+        out.textContent = 'Nothing scanned yet.';
+        out.classList.add('empty');
+        findingsEl.textContent = '';
+        lastRedacted = '';
+        copyBtn.disabled = true;
+        setError('');
+        input.focus();
+      });
+      $('copy').addEventListener('click', async () => {
+        if (!lastRedacted) return;
+        try {
+          await navigator.clipboard.writeText(lastRedacted);
+          copyBtn.textContent = 'Copied';
+          setTimeout(() => (copyBtn.textContent = 'Copy'), 1200);
+        } catch {
+          setError('Clipboard was blocked. Select the text and copy it manually.');
+        }
+      });
+      $('mode').addEventListener('change', () => {
+        if (input.value.trim()) run();
+      });
+      document.addEventListener('keydown', (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+          event.preventDefault();
+          run();
+        }
+      });
+
+      checkHealth();
+      input.focus();
+    </script>
+  </body>
+</html>
