@@ -1,0 +1,25 @@
+# Example .env — every value below is fake, generated for the Veil test suite.
+# Do not put real credentials in this file.
+
+NODE_ENV=production
+PORT=8080
+
+AWS_ACCESS_KEY_ID=AKIAQWERTYUIOPASDFGH
+AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+AWS_REGION=us-west-2
+
+DATABASE_URL=postgres://veil_app:hunter2isbad@db-prod-01.corp.internal:5432/billing
+REDIS_URL=redis://default:8f3a9c2e1b7d4f6a@cache-01.corp.internal:6379
+
+GITHUB_TOKEN=ghp_16C7e42F292c6912E7710c838347Ae178B4a
+OPENAI_API_KEY=sk-proj-Q7mN2pR5sT8uV1wX4yZ6aB9cD3eF0gH
+STRIPE_SECRET_KEY=sk_live_51Nx8kLm2QpR7sT4uV6wX9yZ
+SLACK_BOT_TOKEN=xoxb-2847162534-9fK2mQ7pR4sT6uV8wX0y
+GOOGLE_MAPS_KEY=AIzaSyD4kLm2QpR7sT4uV6wX9yZ0aB1cD2eF3gH
+
+# Placeholders should not be flagged.
+API_TOKEN=<your-token-here>
+SESSION_SECRET=changeme
+
+INTERNAL_HOST=metrics.corp.internal
+ADMIN_IP=10.42.7.19
